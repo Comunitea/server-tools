@@ -56,9 +56,7 @@ class Image(models.Model):
         string='Image title',
         translate=True,
     )
-    filename = fields.Char(
-        string='Filename',
-    )
+    filename = fields.Char()
     extension = fields.Char(
         string='File extension',
         readonly=True,
@@ -96,9 +94,7 @@ class Image(models.Model):
         help="Small-sized image. It is automatically resized as a 64 x 64 px "
              "image, with aspect ratio preserved. Use this field anywhere a "
              "small image is required.")
-    comments = fields.Text(
-        'Comments',
-        translate=True)
+    comments = fields.Text(translate=True)
     sequence = fields.Integer(
         default=10)
     show_technical = fields.Boolean(
@@ -133,7 +129,7 @@ class Image(models.Model):
             for f in ("id", "model"))
 
     @api.multi
-    def _compute_image_from_filestore(self):
+    def _get_image_from_filestore(self):
         return self.attachment_id.datas
 
     @api.multi
@@ -175,7 +171,7 @@ class Image(models.Model):
 
     @api.multi
     @api.depends('image_main')
-    def _get_image_sizes(self):
+    def _compute_image_sizes(self):
         for s in self:
             try:
                 vals = tools.image_get_resized_images(
