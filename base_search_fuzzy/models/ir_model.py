@@ -17,10 +17,14 @@ def patch_leaf_trgm(method):
         leaf = eleaf.leaf
         left, operator, right = leaf
         table_alias = '"%s"' % (eleaf.generate_alias())
+       
+        if operator == '%' or operator == '%>':
 
-        if operator == '%':
-
-            sql_operator = '%%'
+            if operator == '%':
+                sql_operator = '%%'
+            else:
+                sql_operator = '%%>'
+            
             params = []
 
             if left in model._fields:
@@ -46,7 +50,10 @@ def patch_leaf_trgm(method):
                 params = [params]
             return query, params
         elif operator == 'inselect':
-            right = (right[0].replace(' % ', ' %% '), right[1])
+            if operator == '%':
+                right = (right[0].replace(' % ', ' %% '), right[1])
+            else:
+                right = (right[0].replace(' %> ', ' %%> '), right[1])
             eleaf.leaf = (left, operator, right)
         return method(self, eleaf)
 
@@ -59,7 +66,10 @@ def patch_generate_order_by(method):
 
     @api.model
     def decorate_generate_order_by(self, order_spec, query):
-        if order_spec and order_spec.startswith('similarity('):
+        if order_spec and (order_spec.startswith('similarity(') 
+            or order_spec.startswith('word_similarity(')
+            or order_spec.startswith('(word_similarity(')
+            or order_spec.startswith('(coalesce(word_similarity(')):
             return ' ORDER BY ' + order_spec
         return method(self, order_spec, query)
 
@@ -83,6 +93,8 @@ class IrModel(models.Model):
 
         if '%' not in expression.TERM_OPERATORS:
             expression.TERM_OPERATORS += ('%',)
+        if '%>' not in expression.TERM_OPERATORS:
+            expression.TERM_OPERATORS += ('%>',)
 
         if not hasattr(models.BaseModel._generate_order_by,
                        '__decorated__'):
